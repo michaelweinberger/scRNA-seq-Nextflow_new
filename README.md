@@ -25,7 +25,8 @@ This pipeline supports both **Scanpy** and **Seurat** based analysis paths and i
     * Dimensionality reduction (PCA) and Visualization (UMAP).
     * Sample integration via **[Harmony](https://github.com/immunogenomics/harmony)<sup>5</sup>**.
 5.  **Ambient RNA Correction (Optional)**
-    * Integration with **[SoupX] (https://github.com/constantAmateur/SoupX)<sup>6</sup>** to remove ambient RNA contamination (enabled via `--run_soupx "Yes"`).
+    * Integration with **[SoupX] (https://github.com/constantAmateur/SoupX)<sup>6</sup>** to remove ambient RNA contamination \
+    (enabled via `--run_soupx "Yes"`).
 6.  **Cell Type Annotation**
     * Automated cell type assignment using **[SCINA] (https://github.com/jcao89757/SCINA)<sup>7</sup>** based on provided marker gene lists.
 
@@ -40,23 +41,23 @@ This pipeline supports both **Scanpy** and **Seurat** based analysis paths and i
 
 ## Usage
 
-### 1. Clone the Repository
+#### 1. Clone the Repository
 
 ```bash
 git clone [https://github.com/michaelweinberger/scRNA-seq-Nextflow.git](https://github.com/michaelweinberger/scRNA-seq-Nextflow.git)
 cd scRNA-seq-Nextflow
 ```
 
-2. Adjust the `nextflow.config` file
+#### 2. Adjust the `nextflow.config` file
 
-3.  Start the pipeline via `nextflow run` like
+#### 3.  Start the pipeline via `nextflow run` like
 ```
 nextflow run main.nf \
 -profile HPC_docker,mouse \
 -resume
 ```
 
-In this example, the "HPC_no_docker" profile directs Nextflow to run the pipeline in a high-performance computing environment using the slurm scheduler, and the "mouse" profile sets some genome parameters used to generate cellranger genome index files.
+In this example, the "HPC_no_docker" profile directs Nextflow to run the pipeline in a high-performance computing environment using the slurm scheduler, and the "mouse" profile sets some genome parameters used to generate cellranger genome index files. \
 When setting the `-resume` flag, the pipeline will resume from a previous run.
 
 <br/>
@@ -96,7 +97,7 @@ All parameters can be set on the command line with `--parameter_name` or in the 
             - "seurat" for Seurat clustering outputs (without SoupX)\
                 - "scina" for SCINA cell type annotation outputs\
             - (If enabled) "soupx" for SoupX outputs:\
-                - "soupx", "scanpy" or "seurat"
+                "soupx", "scanpy" or "seurat"
 
 <br/>
 
@@ -138,8 +139,8 @@ ALTERNATIVELY, this directory can contain '.h5' files with Cell Ranger mapped da
 
 - `cellranger_info_tsv` (Optional) If you would like to run SoupX to correct ambient RNA contamination, supply a file path to a \
                 tab-delimited text file with columns "sample_id", containing sample IDs for Cell Ranger Count or \
-                non de-multiplexed parent IDs for Cell Ranger Multi, and "cellranger_dir", containing paths to Cell Ranger \
-                output directories (containing the "outs/" directory)
+                non de-multiplexed parent IDs for Cell Ranger Multi, \
+                and "cellranger_dir", containing paths to Cell Ranger output directories (parent directory of "outs/")
 <br/>
 
 ### Parameters related to scRNA-seq clustering:
