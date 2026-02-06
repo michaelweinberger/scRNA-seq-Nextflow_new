@@ -42,7 +42,7 @@ This pipeline supports both **Scanpy** and **Seurat** based analysis paths and i
 #### 1. Clone the Repository
 
 ```bash
-git clone [https://github.com/michaelweinberger/scRNA-seq-Nextflow_new.git](https://github.com/michaelweinberger/scRNA-seq-Nextflow_new.git)
+git clone https://github.com/michaelweinberger/scRNA-seq-Nextflow_new.git
 cd scRNA-seq-Nextflow_new
 ```
 
