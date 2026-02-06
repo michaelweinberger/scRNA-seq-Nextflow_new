@@ -12,23 +12,21 @@ This pipeline supports both **Scanpy** and **Seurat** based analysis paths and i
     * Automated download of genome FASTA and GTF files from Ensembl.
     * Generation of Cell Ranger genome indices.
 2.  **Alignment & Counting**
-    * Supports two modes via **[Cellranger](https://www.10xgenomics.com/support/software/cell-ranger/latest/tutorials/cr-tutorial-ct)**:
-        * **Standard Count**: Standard gene expression quantification (via `--input_count`).
+    * Supports two modes via **[Cell Ranger](https://www.10xgenomics.com/support/software/cell-ranger/latest/tutorials/cr-tutorial-ct)**:
+        * **Count**: Standard gene expression quantification (via `--input_count`).
         * **Multi**: Multiplexing/Feature Barcode analysis (via `--input_multi`).
     * Performs sample aggregation via `cellranger aggr`.
-3.  **Quality Control**
-    * Transcriptome/Proteome BLAST checks.
-4.  **Clustering & Integration**
+3.  **Clustering & Integration**
     * User-selectable analysis backend: **[Scanpy](https://scanpy.readthedocs.io/en/stable/)<sup>1</sup>** or **[Seurat](https://satijalab.org/seurat/)<sup>2</sup>**.
     * Includes QC filtering.
     * Includes doublet detection via [DoubletDetection](https://github.com/JonathanShor/DoubletDetection?tab=readme-ov-file)<sup>3</sup> (as part of Scanpy analysis) or [DoubletFinder](https://github.com/chris-mcginnis-ucsf/DoubletFinder)<sup>4</sup> (as part of Seurat analysis)
-    * Dimensionality reduction (PCA) and Visualization (UMAP).
+    * Dimensionality reduction and Visualization.
     * Sample integration via **[Harmony](https://github.com/immunogenomics/harmony)<sup>5</sup>**.
-5.  **Ambient RNA Correction (Optional)**
-    * Integration with **[SoupX] (https://github.com/constantAmateur/SoupX)<sup>6</sup>** to remove ambient RNA contamination \
-    (enabled via `--run_soupx "Yes"`).
-6.  **Cell Type Annotation**
-    * Automated cell type assignment using **[SCINA] (https://github.com/jcao89757/SCINA)<sup>7</sup>** based on provided marker gene lists.
+4.  **Ambient RNA Correction (Optional)**
+    * Runs **[SoupX](https://github.com/constantAmateur/SoupX)<sup>6</sup>** to remove ambient RNA contamination. \
+    (enabled via `--run_soupx "Yes"`)
+5.  **Cell Type Annotation**
+    * Automated cell type assignment using **[SCINA](https://github.com/jcao89757/SCINA)<sup>7</sup>** based on marker gene lists.
 
 ---
 
@@ -44,13 +42,13 @@ This pipeline supports both **Scanpy** and **Seurat** based analysis paths and i
 #### 1. Clone the Repository
 
 ```bash
-git clone [https://github.com/michaelweinberger/scRNA-seq-Nextflow.git](https://github.com/michaelweinberger/scRNA-seq-Nextflow.git)
-cd scRNA-seq-Nextflow
+git clone [https://github.com/michaelweinberger/scRNA-seq-Nextflow_new.git](https://github.com/michaelweinberger/scRNA-seq-Nextflow_new.git)
+cd scRNA-seq-Nextflow_new
 ```
 
 #### 2. Adjust the `nextflow.config` file
 
-#### 3.  Start the pipeline via `nextflow run` like
+#### 3. Start the pipeline like
 ```
 nextflow run main.nf \
 -profile HPC_docker,mouse \
