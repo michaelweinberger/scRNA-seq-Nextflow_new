@@ -1,0 +1,16 @@
+Cardiomyocyte_A,Cardiomyocyte_V,Endocardial_cell_A,Endocardial_cell_V,Endocardial_cell_BA,EC_Artery,EC_Vein,EC_Capillary,EC_Lymphatic,Epicardial_cell_A,Epicardial_cell_V,Fibroblast,Myofibroblast,Granulocyte,Monocyte,Macrophage,Dendritic_cell,B_cell,Mast_cell,T_cell,NK_cell,Smooth_muscle_cell,Pericyte,Neuronal_cell,Erythrocyte,Adipocyte,Mesenchymal_cell,Cycling
+myh6,myh7l,vcam1b,f8,frzb,sox17,ephb4a,itga2b,lyve1a,mmel1,endouc,dpt,postnb,mpx,csf1ra,marco,hepacam2,cd79a,cpa5,zap70,nkl.1,tpm2,kcne4,sncga,alas2,pparg,abi3bpb,mki67
+ttn.1,tnni4a,cyp2ad2,cyp1b1,edn2,hey2,bcl6b,hbegfb,cdh6,myh10,cemip,c4,col12a1a,npsn,low_marco,c1qa,cd83,igic1s1,lyz,cd8a,il2rb,acana,rasl12,scn4ab,cahz,ppargc1b,rspo1,cdk1
+ttn.2,gpr22a,gpr182,mb,adgrg6,efnb2a,nr2f2,apln,prox1a,slc29a1b,spaca4l,dcn,col1a1a,lect2l,low_mpeg1.1,c1qb,flt3,cd79b,gzm3,tcf7,nkl.3,tagln,abcc9,bcam,hbaa1,cebpa,angptl7,pcna
+shox2,cox4i1l,basp1,flt1,cpamd8,dll4,ephb4b,admb,lyve1b,itm2cb,sost,ddr2a,col1a1b,pnp5a,low_cpa5,c1qc,id2a,igl4v8,gzm3.2,cd8b,si:dkey-262k9.2,myh11a,ndufa4l2a,plp1b,hbba1,adipoqa,cyp26b1,
+fhl2b,ndufa4,pla2g4ab,klf2b,c2cd4a,flt1,flt4,sele,prox1b,cxcl14,bnc2,bicc1a,col1a2,fcer1gl,low_scn4ab,csf1ra,znf366,ighv1-4,gzm3.3,cd4-1,fcer1g,acta2,si:ch211-198c19.3,s100b,,,fibinb,
+alpk2,hspb6,pdgfra,epas1b,wnt11r,dlc,lhx6,si:ch211-195b11.3,flt4,ecm1b,tgm2b,bicc1b,col5a1,si:ch211-9d9.1,low_sncga,si:ch211-212k18.7,cd40,pax5,gzm3.4,cd4-2.2,syk,myl9a,pdgfrb,scn1ba,,,,
+mybphb,nme2b.2,spock3,igfbp6b,spock3,esm1,low_sox17,low_nr2f2,stox2a,gstm.3,gstm.3,mmp2,col5a2a,BX908782.2,low_frzb,mertka,ccr7,blnk,scin,lck,nitr9,itih1,rgs5b,mbpa,,,,
+mylk4a,myl7,nppc,spock3,low_gpr182,cavin1b,low_flt1,low_dll4,cldn11a,,,col18a1b,col11a1a,low_cpa5,,mpeg1.1,mhc2dab,cd37,hdc,trac,nkl.2,fbln5,mustn1a,mbpb,,,,
+smtnl1,myh7,serpine1,low_gpr182,,cd81b,low_prox1a,,,,,low_postnb,col12a1b,,,timp4.3,batf3,ight,npsn,cd28,nkl.4,fhl2a,low_acana,cadm1a,,,,
+kcnj5,cntn2,low_cyp1b1,low_frzb,,tspan18a,,,,,,,fn1a,,,ccr2,xcr1a.1,,low_pnp5a,bcl2l10,tbx21,low_kcne4,,anxa13l,,,,
+myl7,tnni4b.3,low_frzb,,,low_nr2f2,,,,,,,fstl1b,,,mfap4.8,zbtb46,,,sla2,tox2,,,,,,,
+low_myh7,low_myh6,,,,,,,,,,,runx1,,,low_hepacam2,mpeg1.1,,,foxp3a,il2rgb,,,,,,,
+low_myh7l,,,,,,,,,,,,COMP,,,,low_c1qa,,,low_nkl.2,nfil3-4,,,,,,,
+,,,,,,,,,,,,,,,,low_c1qb,,,low_nkl.3,low_cd4-1,,,,,,,
+,,,,,,,,,,,,,,,,low_c1qc,,,low_nkl.4,low_cd8a,,,,,,,

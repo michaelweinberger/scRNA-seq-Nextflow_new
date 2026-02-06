@@ -1,0 +1,5 @@
+sample_id	fastq_dir	species	stage	condition	tissue	modality
+WTsample	/ceph/project/nf_scRNAseq_analysis/00_fastq	mouse	neonatal	WT	ventricle	scRNAseq
+LKOsample	/ceph/project/nf_scRNAseq_analysis/00_fastq	mouse	neonatal	Lyve1_KO	ventricle	scRNAseq
+
+

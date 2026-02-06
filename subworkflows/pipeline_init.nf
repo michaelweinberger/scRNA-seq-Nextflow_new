@@ -33,6 +33,7 @@ workflow PIPELINE_INIT_WF {
                 .map { line ->
                     tuple( line.sample_id, file( line.fastq_dir, type: "dir", checkIfExists: true ) )
                 }
+		.unique()
                 .set { ch_txt }
             ch_input = ch_input.mix( ch_txt )
 
@@ -49,7 +50,7 @@ workflow PIPELINE_INIT_WF {
 
         } else {
 
-            println "Error: Input sample sheet should be a '.txt' file. Set sample sheet file path in the nextflow.config file."
+            println "Error: Input sample sheet should be a tab-delimited '.txt' file. Set sample sheet file path in the nextflow.config file."
 
         }
 

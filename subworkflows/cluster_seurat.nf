@@ -16,29 +16,35 @@ process CLUSTER_SEURAT_PR {
     debug true
     publishDir "${outdir}/seurat", pattern: "", mode: "copy", saveAs: { filename -> "${filename}" }
 
-    container { ( "$docker_enabled" ) ? "michaelweinberger/seurat-doubletfinder-harmony:v1" : "" }
+    container { ( params.docker_enabled == "true" || params.docker_enabled == true ) ? "michaelweinberger/seurat-soupx-scina:v1" : "" }
 
     input:
-    path (cellranger_out_dir)
-    path (metadata)
-    val  (out_name)
-    val  (min_genes)
-    val  (max_genes)
-    val  (max_perc_mt)
-    val  (min_cells)
-    val  (n_pcs)
-    val  (harmony_var)
-    val  (leiden_res)
-    path (outdir)
-    val  (docker_enabled)
-    val  (r_module)
+    path ( cellranger_out_dir )
+    path ( metadata )
+    path ( cellranger_gtf_file )
+    path ( transcriptome_blast_txt )
+    path ( cellcycle_genes_csv )
+    val  ( out_name )
+    val  ( drop_ribo_prot )
+    path ( genes_drop_csv )
+    val  ( min_genes )
+    val  ( max_genes )
+    val  ( max_perc_mt )
+    val  ( min_cells )
+    val  ( n_pcs )
+    val  ( harmony_var )
+    val  ( leiden_res )
+    val  ( outdir )
+    val  ( docker_enabled )
+    val  ( r_module )
     
     output:
     path ( "*${out_name}*.pdf"                             ), emit: plots_pdf
     path ( "*${out_name}*.png"                             ), emit: plots_png
     path ( "${out_name}_doublets.csv"                      ), emit: doublets_csv
     path ( "${out_name}_markers.xlsx"                      ), emit: markers_csv
-    path ( "${out_name}_metadata.csv"                      ), emit: cell_metadata_csv
+    path ( "${out_name}_cell_metadata.csv"                 ), emit: cell_metadata_csv
+    path ( "${out_name}_feature_metadata.csv"              ), emit: feature_metadata_csv
     path ( "${out_name}_scRNAseq_analysed_no_doublets.rds" ), emit: scrnaseq_object
     path ( "versions.txt"                                  ), emit: versions
 
@@ -48,19 +54,22 @@ process CLUSTER_SEURAT_PR {
         module load "$r_module"
     fi
 
-    [ ! -d "${outdir}/seurat" ] && mkdir -p "${outdir}/seurat"
-
-    4_seurat.R --args data_dir="$cellranger_out_dir" \
-                      metadata_file="$metadata" \
-                      out_dir="\$PWD" \
-                      project_name="$out_name" \
-                      min_genes="$min_genes" \
-                      max_genes="$max_genes" \
-                      max_perc_mt="$max_perc_mt" \
-                      min_cells="$min_cells" \
-                      n_pcs="$n_pcs" \
-                      harmony_var="$harmony_var" \
-                      leiden_res="$leiden_res"
+    4_3_seurat.R --args data_dir="$cellranger_out_dir" \
+                        metadata_file="$metadata" \
+                        gtf_file="$cellranger_gtf_file" \
+                        blast_file="$transcriptome_blast_txt" \
+                        cellcycle_genes_csv="$cellcycle_genes_csv" \
+                        out_dir="\$PWD" \
+                        project_name="$out_name" \
+                        drop_ribo_prot="$drop_ribo_prot" \
+                        genes_drop_csv="$genes_drop_csv" \
+                        min_genes="$min_genes" \
+                        max_genes="$max_genes" \
+                        max_perc_mt="$max_perc_mt" \
+                        min_cells="$min_cells" \
+                        n_pcs="$n_pcs" \
+                        harmony_var="$harmony_var" \
+                        leiden_res="$leiden_res"
 
     echo "${task.process}:" > versions.txt
         R --version | head -n 1 | sed -e \$'s/^/\t/' >> versions.txt
@@ -83,7 +92,12 @@ workflow CLUSTER_SEURAT_WF {
     take:
         cellranger_out_dir
         metadata
+        cellranger_gtf_file
+        transcriptome_blast_txt
+        cellcycle_genes_csv
         out_name
+        drop_ribo_prot
+        genes_drop_csv
         min_genes
         max_genes
         max_perc_mt
@@ -101,7 +115,12 @@ workflow CLUSTER_SEURAT_WF {
         CLUSTER_SEURAT_PR ( 
             cellranger_out_dir,
             metadata,
+            cellranger_gtf_file,
+            transcriptome_blast_txt,
+            cellcycle_genes_csv,
             out_name,
+            drop_ribo_prot,
+            genes_drop_csv,
             min_genes,
             max_genes,
             max_perc_mt,

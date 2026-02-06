@@ -1,9 +1,9 @@
-docker build -t michaelweinberger/seurat-doubletfinder-harmony:v1 .
+docker build -t michaelweinberger/seurat-soupx-scina:v1 .
 
 cat ./docker_password.txt | docker login --username michaelweinberger --password-stdin
 
-docker tag michaelweinberger/seurat-doubletfinder-harmony:v1 michaelweinberger/seurat-doubletfinder-harmony:v1
+docker tag michaelweinberger/seurat-soupx-scina:v1 michaelweinberger/seurat-soupx-scina:v1
 
-docker push michaelweinberger/seurat-doubletfinder-harmony:v1
+docker push michaelweinberger/seurat-soupx-scina:v1
 
 docker logout

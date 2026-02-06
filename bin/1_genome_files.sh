@@ -1,23 +1,12 @@
 #!/bin/bash
 
-
-
-#############################################################
-####                                                    #####
-####              User defined variables                #####
-####                                                    #####
-#############################################################
-
-
-
-############################################################
-
-
-
+### Safety and Debugging Settings
+# set -e: Exit immediately if a command exits with a non-zero status.
+# set -u: Treat unset variables as an error when substituting.
+# set -o: Prints current options (Note: Usually this is used with 'pipefail', e.g., 'set -o pipefail')
 set -e
 set -u
-
-
+set -o
 
 ### declare input arguments
 while getopts ":s:g:u:l:e:o:" flag
@@ -50,46 +39,31 @@ do
 	esac
 done
 
-
-
-# Capitalise first letter
+### Variable Formatting
+# Uses Bash parameter expansion to capitalize the first letter of the species name.
+# Required because Ensembl file naming conventions often capitalize the Genus (e.g., 'Homo_sapiens').
 species_latin_2=${species_latin^}
 
+### Download and Process Genome Sequence (FASTA)
+# 1. Uses rsync to download the .dna.toplevel.fa.gz file from the EBI Ensembl FTP server.
+# 2. Renames the downloaded file to a shorter, standard name.
+# 3. Decompresses the file using gunzip.
+rsync -avzP rsync://ftp.ebi.ac.uk/ensemblorg/pub/release-${ensembl_version}/fasta/${species_latin}/dna/${species_latin_2}.${genome}.dna.toplevel.fa.gz .
+mv ./${species_latin_2}.${genome}.dna.toplevel.fa.gz ./${genome}.fa.gz
+gunzip ./${genome}.fa.gz
 
+### Download and Process Gene Annotations (GTF)
+# 1. Uses rsync to download the gene transfer format (GTF) file from Ensembl.
+# 2. Renames the file to include the genome and Ensembl version.
+# 3. Decompresses the file.
+rsync -avzP rsync://ftp.ebi.ac.uk/ensemblorg/pub/release-${ensembl_version}/gtf/${species_latin}/${species_latin_2}.${genome}.${ensembl_version}.gtf.gz .
+mv ./${species_latin_2}.${genome}.${ensembl_version}.gtf.gz ./${genome}.${ensembl_version}.gtf.gz
+gunzip ./${genome}.${ensembl_version}.gtf.gz
 
-### download or generate cellranger reference data
-if [ $species = "human" ] ; then
-	cellranger_ref="refdata-gex-GRCh38-2020-A.tar.gz"
-elif [ $species = "mouse" ] ; then
-	cellranger_ref="refdata-gex-mm10-2020-A.tar.gz"
-else
-	cellranger_ref="refdata-cellranger-${genome}"
-fi
-
-
-
-if [ $species = "human" ] || [ $species = "mouse" ] ; then
-	wget https://cf.10xgenomics.com/supp/cell-exp/${cellranger_ref}
-	tar -zxvf ${cellranger_ref}
-	rm ${cellranger_ref}
-else
-	rsync -avzP rsync://ftp.ebi.ac.uk/ensemblorg/pub/release-${ensembl_version}/fasta/${species_latin}/dna/${species_latin_2}.${genome}.dna.primary_assembly.fa.gz .
-	mv ./${species_latin_2}.${genome}.dna.primary_assembly.fa.gz ./${genome}.fa.gz
-	gunzip ./${genome}.fa.gz
-
-	rsync -avzP rsync://ftp.ebi.ac.uk/ensemblorg/pub/release-${ensembl_version}/gtf/${species_latin}/${species_latin_2}.${genome}.${ensembl_version}.gtf.gz .
-	mv ./${species_latin_2}.${genome}.${ensembl_version}.gtf.gz ./${genome}.${ensembl_version}.gtf.gz
-	gunzip ./${genome}.${ensembl_version}.gtf.gz
-fi
-
-
-
-
-### download file containing positions of repetitive elements in genome
+# download file containing positions of repetitive elements in genome
 #wget -L http://hgdownload.soe.ucsc.edu/goldenPath/${genome_ucsc}/database/rmsk.txt.gz .
 #gunzip ./rmsk.txt.gz
 #mv ./rmsk.txt ./${genome}_rmsk.txt
 
-
-
-echo All done!
+echo "------------------------------------------------"
+echo "Success! Genome FASTA and GTF files have been downloaded."

@@ -1,3 +1,0 @@
-sample_id	cellranger_count_dir
-MI_day3_TIP	/ceph/project/tsslab/mweinber/tmp/nextflow/out/cellranger/MI_day3_TIP_count
-MI_day7_TIP	/ceph/project/tsslab/mweinber/tmp/nextflow/out/cellranger/MI_day7_TIP_count

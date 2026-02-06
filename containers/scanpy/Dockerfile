@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG PYTHON_VERSION=3.11.9-slim-bookworm
+ARG PYTHON_VERSION=3.11.14-slim-bookworm
 FROM python:${PYTHON_VERSION} AS base
 
 # Prevents Python from writing pyc files.
@@ -21,14 +21,15 @@ RUN apt-get update && \
 
 # Declare python packages to be installed
 ENV PYTHON_PACKAGES="\
-    anndata==0.9.1 \
-    doubletdetection==4.2 \
-    matplotlib==3.7.1 \
-    numpy==1.24.3 \
-    pandas==2.1.4 \
-    scanpy==1.9.3 \
-    scipy==1.10.1 \
-    seaborn==0.12.2 \
+    adjustText==0.8 \
+    anndata==0.12.6 \
+    doubletdetection==4.3.0.post1 \
+    matplotlib==3.10.7 \
+    numpy==2.0.1 \
+    pandas==2.3.3 \
+    scanpy==1.11.5 \
+    scipy==1.15.3 \
+    seaborn==0.13.2 \
 "
 
 # Download dependencies as a separate step to take advantage of Docker's caching.

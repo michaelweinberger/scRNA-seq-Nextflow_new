@@ -10,9 +10,41 @@ nextflow.enable.dsl = 2
 // Processes
 
 /*
- * run cellranger count
+ * generate cell ranger multi config .csv file
  */
-process CELLRANGER_COUNT_PR {
+process CELLRANGER_MULTI_CONFIG_PR {
+    cpus 1
+    debug false
+    publishDir (
+        "${outdir}/cellranger", 
+        pattern: "", 
+        mode: "copy", 
+        saveAs: { filename -> "${filename}" }
+    )
+
+    input:
+    path  ( cellranger_ref_dir )                // Cell Ranger reference genome absolute path
+    tuple val( sample_id ), path( fastq_dir )
+    path  ( sample_sheet )          		// sample IDs & metadata
+    val   ( outdir )
+    
+    output:
+    tuple val( sample_id ), path( "cellranger_multi_config.csv" ), emit: cellranger_multi_config   // emitted for cellranger multi
+
+    script:
+    """
+    cellranger_ref_dir_1="\$(cat ${cellranger_ref_dir})"
+
+    2_cellranger_multi_input.sh -i "${sample_id}" -s "${sample_sheet}" -r "\${cellranger_ref_dir_1}"
+    """
+}
+
+
+
+/*
+ * run cell ranger multi
+ */
+process CELLRANGER_MULTI_PR {
     debug       false
     tag         "$sample_id"
     publishDir (
@@ -23,23 +55,27 @@ process CELLRANGER_COUNT_PR {
     )
     publishDir (
         "${outdir}/cellranger", 
+        pattern: "cellranger_count_info.tsv", 
+        mode: "copy", 
+        saveAs: { filename -> "${filename}" }
+    )
+    publishDir (
+        "${outdir}/cellranger", 
         pattern: "cellranger_count_dir/outs", 
         mode: "copy", 
-        saveAs: { fn -> "${sample_id.replace(',', '_')}_count/outs" }
+       saveAs: { fn -> "${sample_id.replace(',', '_')}_count/outs" }
     )
 
     container { ( params.docker_enabled == "true" || params.docker_enabled == true ) ? "litd/docker-cellranger:v9.0.1" : "" }
 
     input:
-    path  ( transcriptome_ref )
-    tuple val( sample_id ), path( fastq_dir )
+    tuple val( sample_id ), path( cellranger_multi_config_csv )
     val   ( outdir )
     val   ( docker_enabled )
     val   ( cellranger_module )
-    val   ( chemistry )
     
     output:
-    path ( "cellranger_count_info.tsv" ), emit: cellranger_count_info // emitted for velocyto
+    path ( "cellranger_count_info.tsv" ), emit: cellranger_count_info 
     path ( "cellranger_count_dir/outs" ), emit: cellranger_count_dir  // emitted for publishing
     path ( "versions.txt"              ), emit: versions
 
@@ -51,23 +87,10 @@ process CELLRANGER_COUNT_PR {
         module load "$cellranger_module"
     fi
 
-    # run cellranger count
-    VERSION_NUM=\$(cellranger --version | grep -oP 'cellranger-\\K[0-9]+' | head -n 1)
-
-    if [ "\${VERSION_NUM}" -ge 8 ] ; then
-        cellranger count --id="cellranger_count_dir" \
-		         --fastqs="$fastq_dir" \
-		         --transcriptome="$transcriptome_ref" \
-		         --sample="$sample_id" \
-                         --chemistry="$chemistry" \
-                         --create-bam=true
-    else
-        cellranger count --id="cellranger_count_dir" \
-		         --fastqs="$fastq_dir" \
-		         --transcriptome="$transcriptome_ref" \
-		         --sample="$sample_id" \
-                         --chemistry="$chemistry"
-    fi
+    # run cell ranger multi
+    cellranger multi \
+	--id="cellranger_count_dir" \
+	--csv="$cellranger_multi_config_csv"
 
     printf "sample_id\tcellranger_dir\n" > cellranger_count_info.tsv
     cellranger_dir="\$(echo \${PWD}/cellranger_count_dir)"
@@ -81,9 +104,10 @@ process CELLRANGER_COUNT_PR {
 
 
 /*
- * generate cellranger aggr input .csv file
+ * generate cell ranger aggr input .csv file
  */
 process CELLRANGER_AGGR_INPUT_PR {
+    cpus 1
     debug false
     publishDir (
         "${outdir}/cellranger", 
@@ -102,7 +126,7 @@ process CELLRANGER_AGGR_INPUT_PR {
 
     script:
     """
-    2_cellranger_count_aggr_input.sh -s "${sample_sheet}" -i "${cellranger_count_info}"
+    2_cellranger_multi_aggr_input.sh -s "${sample_sheet}" -i "${cellranger_count_info}"
     """
 }
 
@@ -112,6 +136,7 @@ process CELLRANGER_AGGR_INPUT_PR {
  * generate barcode metadata file
  */
 process CELLRANGER_METADATA_PR {
+    cpus 1
     debug false
     publishDir (
         "${outdir}/cellranger", 
@@ -125,7 +150,7 @@ process CELLRANGER_METADATA_PR {
     val  ( outdir )
     
     output:
-    path ( "cellranger_aggr_cell_metadata.tsv" ), emit: metadata // emitted for scanpy,seurat and loom merge
+    path ( "cellranger_aggr_cell_metadata.tsv" ), emit: metadata   // emitted for scanpy, seurat and loom merge
 
     script:
     """
@@ -136,7 +161,7 @@ process CELLRANGER_METADATA_PR {
 
 
 /*
- * run cellranger aggr
+ * run cell ranger aggr
  */
 process CELLRANGER_AGGR_PR {
     debug false
@@ -186,34 +211,39 @@ process CELLRANGER_AGGR_PR {
 
 // Workflow
 
-workflow CELLRANGER_COUNT_AGGR_WF {
+workflow CELLRANGER_MULTI_AGGR_WF {
 
     take:
-        cellranger_index
+        cellranger_ref_dir
         sample_sheet
         input                     // tuple sample ID + fastq dir
         cellranger_aggr_out_name
         outdir
         docker_enabled
         cellranger_module
-        chemistry
 
     main:
         ch_versions = Channel.empty()
 
-        // run cellranger count
-        CELLRANGER_COUNT_PR (
-            cellranger_index,
+        // generate cellranger multi config .csv file
+        CELLRANGER_MULTI_CONFIG_PR (
+            cellranger_ref_dir,
             input,
+            sample_sheet,
+            outdir,
+        )
+
+        // run cellranger multi
+        CELLRANGER_MULTI_PR (
+            CELLRANGER_MULTI_CONFIG_PR.out.cellranger_multi_config,
             outdir,
             docker_enabled,
             cellranger_module,
-            chemistry,
         )
-        ch_versions = ch_versions.mix(CELLRANGER_COUNT_PR.out.versions)
+        ch_versions = ch_versions.mix(CELLRANGER_MULTI_PR.out.versions)
 
-        // collect sample IDs and full paths of cellranger count output dirs
-        CELLRANGER_COUNT_PR.out.cellranger_count_info
+        // collect sample IDs and full paths of cellranger output dirs
+        CELLRANGER_MULTI_PR.out.cellranger_count_info
         .collectFile (
             name: "cellranger_count_info.tsv", 
             storeDir: "${outdir}/cellranger", 
@@ -229,7 +259,7 @@ workflow CELLRANGER_COUNT_AGGR_WF {
         }
         .set { cellranger_count_out }
 
-        // generate cellranger aggr input csv file
+        // generate cellranger aggr input .csv file
         CELLRANGER_AGGR_INPUT_PR (
             sample_sheet, 
             cellranger_count_info,

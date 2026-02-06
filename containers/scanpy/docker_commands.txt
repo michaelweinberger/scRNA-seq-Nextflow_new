@@ -1,9 +1,9 @@
-docker build -t michaelweinberger/python-3.11.9-scanpy:v1 .
+docker build -t michaelweinberger/python-3.11.14-scanpy:v1 .
 
 cat ./docker_password.txt | docker login --username michaelweinberger --password-stdin
 
-docker tag michaelweinberger/python-3.11.9-scanpy:v1 michaelweinberger/python-3.11.9-scanpy:v1
+docker tag michaelweinberger/python-3.11.14-scanpy:v1 michaelweinberger/python-3.11.14-scanpy:v1
 
-docker push michaelweinberger/python-3.11.9-scanpy:v1
+docker push michaelweinberger/python-3.11.14-scanpy:v1
 
 docker logout

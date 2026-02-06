@@ -1,4 +1,0 @@
-sample_id	fastq_dir	species	stage	condition	condition_injury	timepoint	tissue	modality
-MI_day3_TIP	/ceph/project/tsslab/mweinber/tmp/nextflow/test_data_small	mouse	adult	B6.129S4_Pdgfratm11(EGFP)Sor_J	MI	3dpi	non_cardiomyocytes_ventricles	scRNAseq
-MI_day7_TIP	/ceph/project/tsslab/mweinber/tmp/nextflow/test_data_small	mouse	adult	B6.129S4_Pdgfratm11(EGFP)Sor_J	MI	7dpi	non_cardiomyocytes_ventricles	scRNAseq
-

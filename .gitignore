@@ -1,10 +1,4 @@
 containers/ubuntu/docker_password.txt
 containers/scanpy/docker_password.txt
-containers/scvelo/docker_password.txt
 containers/seurat/docker_password.txt
-containers/velocyto/docker_password.txt
-test.nf
-test_PARENT_script.sh
 1_PARENT_script.sh
-downsample_fastq.sh
-Farbehi_et_al_sample_setup_downsampled.txt

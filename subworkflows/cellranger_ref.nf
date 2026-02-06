@@ -16,7 +16,7 @@ process GENOME_FILES_PR {
     debug false
     publishDir "${outdir}/genomes", pattern: "", mode: "copy", overwrite: true, saveAs: { filename -> "${filename}" }
 
-    container { ( "$docker_enabled" ) ? "michaelweinberger/ubuntu-22.04:v1" : "" }
+    container { ( params.docker_enabled == "true" || params.docker_enabled == true ) ? "michaelweinberger/ubuntu-22.04:v1" : "" }
     
     input:
     val  ( species )
@@ -24,20 +24,33 @@ process GENOME_FILES_PR {
     val  ( genome_ucsc )
     val  ( species_latin )
     val  ( ensembl_version )
-    path ( outdir )
+    val  ( outdir )
     val  ( docker_enabled )
     
     output:
-    path ( "refdata-*"                        ), emit: cellranger_index, optional: true
     path ( "${genome}.fa"                     ), emit: genome_fasta, optional: true
     path ( "${genome}.${ensembl_version}.gtf" ), emit: genome_gtf, optional: true
     path ( "${genome}_rmsk.txt"               ), emit: genome_repeat_mask, optional: true
 
     script:
     """
-    [ ! -d "${outdir}/genomes" ] && mkdir -p "${outdir}/genomes"
+    # capitalise first letter
+    species_latin_1="${species_latin}"
+    species_latin_2="\${species_latin_1^}"
 
-    1_genome_files.sh -s "${species}" -g "${genome}" -u "${genome_ucsc}" -l "${species_latin}" -e "${ensembl_version}" -o "${outdir}"
+    # download fasta and gtf files
+    rsync -avzP "rsync://ftp.ebi.ac.uk/ensemblorg/pub/release-${ensembl_version}/fasta/${species_latin}/dna/\${species_latin_2}.${genome}.dna.toplevel.fa.gz" .
+    mv "\${species_latin_2}.${genome}.dna.toplevel.fa.gz" "${genome}.fa.gz"
+    gunzip "${genome}.fa.gz"
+
+    rsync -avzP "rsync://ftp.ebi.ac.uk/ensemblorg/pub/release-${ensembl_version}/gtf/${species_latin}/\${species_latin_2}.${genome}.${ensembl_version}.gtf.gz" .
+    mv "\${species_latin_2}.${genome}.${ensembl_version}.gtf.gz" "${genome}.${ensembl_version}.gtf.gz"
+    gunzip "${genome}.${ensembl_version}.gtf.gz"
+
+    # download file containing positions of repetitive elements in genome
+    #wget -L "http://hgdownload.soe.ucsc.edu/goldenPath/${genome_ucsc}/database/rmsk.txt.gz" .
+    #gunzip "rmsk.txt.gz"
+    #mv "rmsk.txt" "${genome}_rmsk.txt"
     """
 }
 
@@ -50,41 +63,74 @@ process CELLRANGER_REF_PR {
     debug false
     publishDir "${outdir}/genomes", pattern: "", mode: "copy", overwrite: true, saveAs: { filename -> "${filename}" }
 
-    container { ( "$docker_enabled" ) ? "litd/docker-cellranger:v7.2.0" : "" }
+    container { ( params.docker_enabled == "true" || params.docker_enabled == true ) ? "litd/docker-cellranger:v9.0.1" : "" }
     
     input:
+    val  ( species )
     val  ( genome )
     path ( genome_fasta )
     path ( genome_gtf )
-    path ( outdir )
+    val  ( outdir )
     val  ( docker_enabled )
     val  ( cellranger_module )
     
     output:
-    path ( "refdata-cellranger-${genome}" ), emit: cellranger_index
-    path ( "versions.txt"                 ), emit: versions
+    path ( "refdata-cellranger-${genome}"                 ), emit: cellranger_index
+    path ( "cellranger_ref_dir.txt"                       ), emit: cellranger_ref_dir
+    path ( "refdata-cellranger-${genome}/genes/genes.gtf" ), emit: cellranger_gtf_file
+    path ( "versions.txt"                                 ), emit: versions
 
     script:
     """
-    if [ "$docker_enabled" == "false" ] ; then
+    if [ "$docker_enabled" = "false" ] ; then
         module load "$cellranger_module"
     fi
 
-    [ ! -d "${outdir}/genomes" ] && mkdir -p "${outdir}/genomes"
-
     # prepare cellranger reference data
-    cellranger mkgtf \
-        "${genome_gtf}" \
-        "${genome}.filtered.gtf" \
-        --attribute=gene_biotype:protein_coding
+    if [ "$species" = "human" ] ; then
+	cellranger_ref="refdata-gex-GRCh38-2024-A"
+    elif [ "$species" = "mouse" ] ; then
+	cellranger_ref="refdata-gex-GRCm39-2024-A"
+    fi
 
-    cellranger mkref \
-        --genome="refdata-cellranger-${genome}" \
-        --fasta="${genome_fasta}" \
-        --genes="${genome}.filtered.gtf" \
-        --output-dir="\${PWD}/refdata-cellranger-${genome}"
+    if [ "$species" = "human" ] || [ "$species" = "mouse" ] ; then
+        wget "https://cf.10xgenomics.com/supp/cell-exp/\${cellranger_ref}.tar.gz"
+        tar -zxvf "\${cellranger_ref}.tar.gz"
+        rm "\${cellranger_ref}.tar.gz"
+        mv "\${cellranger_ref}" "refdata-cellranger-${genome}"
+    else 
+        cellranger mkgtf \
+            "${genome_gtf}" \
+            "${genome}.filtered.gtf" \
+            --attribute=gene_biotype:protein_coding \
+    	    --attribute=gene_biotype:lncRNA \
+    	    --attribute=gene_biotype:antisense \
+    	    --attribute=gene_biotype:IG_LV_gene \
+    	    --attribute=gene_biotype:IG_V_gene \
+    	    --attribute=gene_biotype:IG_V_pseudogene \
+    	    --attribute=gene_biotype:IG_D_gene \
+    	    --attribute=gene_biotype:IG_J_gene \
+    	    --attribute=gene_biotype:IG_J_pseudogene \
+    	    --attribute=gene_biotype:IG_C_gene \
+    	    --attribute=gene_biotype:IG_C_pseudogene \
+    	    --attribute=gene_biotype:TR_V_gene \
+    	    --attribute=gene_biotype:TR_V_pseudogene \
+    	    --attribute=gene_biotype:TR_D_gene \
+    	    --attribute=gene_biotype:TR_J_gene \
+    	    --attribute=gene_biotype:TR_J_pseudogene \
+    	    --attribute=gene_biotype:TR_C_gene
+
+        cellranger mkref \
+            --genome="refdata-cellranger-${genome}" \
+            --fasta="${genome_fasta}" \
+            --genes="${genome}.filtered.gtf" \
+            --output-dir="\${PWD}/refdata-cellranger-${genome}"
+    fi
 
     gunzip "refdata-cellranger-${genome}/genes/genes.gtf.gz"
+
+    # write absolute path to Cell Ranger reference genome
+    echo "\${PWD}/refdata-cellranger-${genome}" > cellranger_ref_dir.txt
 
     echo "${task.process}:" > versions.txt
         echo cellranger: "\$(cellranger --version 2>&1 | awk '{print \$(NF)}' )" | sed -e \$'s/^/\t/' >> versions.txt
@@ -120,23 +166,24 @@ workflow CELLRANGER_REF_WF {
             docker_enabled,
         )
 
-        if ( species == "human" || species == "mouse" ) {
-            cellranger_index = GENOME_FILES_PR.out.cellranger_index
-        } else {
-            CELLRANGER_REF_PR ( 
-                genome,
-                GENOME_FILES_PR.out.genome_fasta,
-                GENOME_FILES_PR.out.genome_gtf,
-                outdir,
-                docker_enabled,
-                cellranger_module,
-            )
-            ch_versions      = ch_versions.mix(CELLRANGER_REF_PR.out.versions)
-            cellranger_index = CELLRANGER_REF_PR.out.cellranger_index
-        }
+        CELLRANGER_REF_PR (
+            species,
+            genome,
+            GENOME_FILES_PR.out.genome_fasta,
+            GENOME_FILES_PR.out.genome_gtf,
+            outdir,
+            docker_enabled,
+            cellranger_module,
+        )
+        ch_versions         = ch_versions.mix(CELLRANGER_REF_PR.out.versions)
+        cellranger_index    = CELLRANGER_REF_PR.out.cellranger_index
+        cellranger_ref_dir  = CELLRANGER_REF_PR.out.cellranger_ref_dir
+        cellranger_gtf_file = CELLRANGER_REF_PR.out.cellranger_gtf_file
 
     emit:
-        versions           = ch_versions
-        cellranger_index   = cellranger_index
-        //genome_repeat_mask = GENOME_FILES_PR.out.genome_repeat_mask
+        versions            = ch_versions
+        cellranger_index    = cellranger_index
+        cellranger_ref_dir  = cellranger_ref_dir
+        cellranger_gtf_file = cellranger_gtf_file
+        //genome_repeat_mask  = GENOME_FILES_PR.out.genome_repeat_mask
 }

@@ -1,40 +1,62 @@
-# A Nextflow pipeline for scRNA-seq analysis
+# scRNA-seq Nextflow Pipeline
+
+A comprehensive Nextflow pipeline for the analysis of single-cell RNA sequencing (scRNA-seq) data. This workflow automates genome reference generation, alignment, quality control, clustering, ambient RNA correction, and cell type annotation.
+
 ---
 
-Use this Nextflow pipeline to analyse scRNA-seq data:
-- Genome alignment via [Cellranger](https://www.10xgenomics.com/support/software/cell-ranger/latest/tutorials/cr-tutorial-ct)
-- Clustering, marker identification, cell type annotation and visualisation via [Scanpy](https://scanpy.readthedocs.io/en/stable/)<sup>1</sup>  or [Seurat](https://satijalab.org/seurat/)<sup>2</sup>
-- Doublet removal with [DoubletDetection](https://github.com/JonathanShor/DoubletDetection?tab=readme-ov-file)<sup>3</sup> (as part of Scanpy analysis) or [DoubletFinder](https://github.com/chris-mcginnis-ucsf/DoubletFinder)<sup>4</sup> (as part of Seurat analysis)
-- Sample integration via [Harmony](https://github.com/immunogenomics/harmony)<sup>5</sup>
-- mRNA velocity analysis via [velocyto](http://velocyto.org/velocyto.py/tutorial/cli.html#run10x-run-on-10x-chromium-samples)<sup>6</sup> and [scvelo](https://scvelo.readthedocs.io/en/stable/)<sup>7</sup>
+## Pipeline Overview
 
-<br/>
+This pipeline supports both **Scanpy** and **Seurat** based analysis paths and includes the following steps:
 
+1.  **Reference Generation**
+    * Automated download of genome FASTA and GTF files from Ensembl.
+    * Generation of Cell Ranger genome indices.
+2.  **Alignment & Counting**
+    * Supports two modes via **[Cellranger](https://www.10xgenomics.com/support/software/cell-ranger/latest/tutorials/cr-tutorial-ct)**:
+        * **Standard Count**: Standard gene expression quantification (via `--input_count`).
+        * **Multi**: Multiplexing/Feature Barcode analysis (via `--input_multi`).
+    * Performs sample aggregation via `cellranger aggr`.
+3.  **Quality Control**
+    * Transcriptome/Proteome BLAST checks.
+4.  **Clustering & Integration**
+    * User-selectable analysis backend: **[Scanpy](https://scanpy.readthedocs.io/en/stable/)<sup>1</sup>** or **[Seurat](https://satijalab.org/seurat/)<sup>2</sup>**.
+    * Includes QC filtering.
+    * Includes doublet detection via [DoubletDetection](https://github.com/JonathanShor/DoubletDetection?tab=readme-ov-file)<sup>3</sup> (as part of Scanpy analysis) or [DoubletFinder](https://github.com/chris-mcginnis-ucsf/DoubletFinder)<sup>4</sup> (as part of Seurat analysis)
+    * Dimensionality reduction (PCA) and Visualization (UMAP).
+    * Sample integration via **[Harmony](https://github.com/immunogenomics/harmony)<sup>5</sup>**.
+5.  **Ambient RNA Correction (Optional)**
+    * Integration with **[SoupX] (https://github.com/constantAmateur/SoupX)<sup>6</sup>** to remove ambient RNA contamination (enabled via `--run_soupx "Yes"`).
+6.  **Cell Type Annotation**
+    * Automated cell type assignment using **[SCINA] (https://github.com/jcao89757/SCINA)<sup>7</sup>** based on provided marker gene lists.
 
+---
 
-## Use
+## Requirements
 
-1. Ensure Nextflow is installed
-As this pipeline uses [Nextflow](https://www.nextflow.io/docs/latest/index.html)<sup>8</sup> to manage analysis workflow, compute resources and software, Nextflow needs to be installed before running the pipeline. 
+* **[Nextflow](https://www.nextflow.io/docs/latest/index.html)<sup>8</sup>** (>= 25.04.7)
+* **Docker** (if running with `docker_enabled: true`) or appropriate software modules loaded in your environment (R, Python, Cell Ranger).
 
-2.  Clone the Github repository like 
+---
+
+## Usage
+
+### 1. Clone the Repository
+
+```bash
+git clone [https://github.com/michaelweinberger/scRNA-seq-Nextflow.git](https://github.com/michaelweinberger/scRNA-seq-Nextflow.git)
+cd scRNA-seq-Nextflow
 ```
-    git clone https://github.com/michaelweinberger/scRNA-seq-Nextflow.git
+
+2. Adjust the `nextflow.config` file
+
+3.  Start the pipeline via `nextflow run` like
+```
+nextflow run main.nf \
+-profile HPC_docker,mouse \
+-resume
 ```
 
-3.  Change into the directory and start the pipeline via `nextflow run` like
-```
-    nextflow run main.nf \
-    --input [path/to/input_file] \
-    --clustering_mode ["scanpy"|"seurat"] \
-    -profile HPC_docker,mouse \
-    -resume
-```
-
-In this example, the "HPC_no_docker" profile directs Nextflow to run the pipeline in a high-performance computing environment using the slurm scheduler, and the "mouse" profile sets some genome parameters used to generate cellranger genome index files. The profile options are outlined in more detail below.
-
-The `--input` flag gives the file path to a ".txt" or ".csv" input sample sheet, the `--clustering_mode` flag indicates if Scanpy (Python) or Seurat (R) should be used for cell clustering. These parameters can also be set in the nextflow.config file.
-
+In this example, the "HPC_no_docker" profile directs Nextflow to run the pipeline in a high-performance computing environment using the slurm scheduler, and the "mouse" profile sets some genome parameters used to generate cellranger genome index files.
 When setting the `-resume` flag, the pipeline will resume from a previous run.
 
 <br/>
@@ -45,23 +67,15 @@ When setting the `-resume` flag, the pipeline will resume from a previous run.
 
 ### Starting from fastq files
 
-If the `input` parameter is set in the nextflow.config file or on the command line, the workflow will start from fastq files. See below under "Parameters" for more information about `input` specifications.
+If the `input_count` or `input_multi` parameters are set in the nextflow.config file, the workflow will start from fastq files. See below under "Parameters" for more information about `input` specifications.
 
-The workflow first generates Cellranger genome index files. Input fastq files are then aligned to the reference genome via the `cellranger count` command and the output from individual samples is combined via `cellranger aggr`. This is followed by doublet removal, clustering, data integration and cluster marker identification. The clustering mode as well as specific parameters related to clustering and data integration can be set in the nextflow.config file (see below).
-
-If no cell type annotation file is provided via the `cell_type_anno` parameter, the workflow stops at this point. You can inspect the output marker ".csv" or ".xlsx" files and the UMAP plots, and generate a cell type annotation ".csv" file as detailed below under "Parameters". Then add the file path in the nextflow.config file or add the `--cell_type_anno` flag on the command line. Run the pipeline again with the `-resume` flag.
-
-With the `cell_type_anno` parameter set, the workflow will annotate cell clusters and perform mRNA velocity analysis.
+The workflow first generates Cell Ranger genome index files. Input fastq files are then aligned to the reference genome via the `cellranger count` or `cellranger multi` commands and the output from individual samples is combined via `cellranger aggr`. This is followed by doublet removal, clustering, data integration and cell type annotation.
 
 <br/>
 
-### Starting from Cellranger outputs
+### Starting from Cell Ranger outputs
 
-To start the workflow from previously generated Cellranger output files instead of from fastq files, set the `input` parameter in the nextflow.config file to an empty string. Instead, specify the `cellranger_out_dir` and `metadata` parameters. These specify a file path to a directory containing cellranger outputs, and a tab delimited file with cell barcodes and metadata, respectively. Please see below under "Parameters" for more details.
-
-As with starting from fastq files, cell type annotation and mRNA velocity analysis will only be run if the `cell_type_anno` parameter is set in the nextflow.config file or if the `--cell_type_anno` flag is used on the command line.
-
-Additionally, the `scRNA_velocity_file` parameter must be set for mRNA velocity analysis to be performed. This specifies the path to a file containing file paths of directories with Cellranger output BAM files, see below under "Parameters" for more details.
+To start the workflow from previously generated Cell Ranger output files instead of from fastq files, leave the `input` parameters in the nextflow.config file empty. Instead, specify the `cellranger_out_dir` and `metadata` parameters. These specify a file path to a directory containing cell Ranger outputs, and a tab delimited file with cell barcodes and metadata, respectively. Please see below under "Parameters" for more details.
 
 <br/>
 
@@ -77,46 +91,62 @@ All parameters can be set on the command line with `--parameter_name` or in the 
             Within this directory, outputs from individual parts of the pipeline are written to different subdirectories:\
             - "genomes" for Cellranger genome index files\
             - "cellranger" for Cellranger mapping outputs\
-            - "scanpy" for Scanpy clustering outputs\
-            - "seurat" for Seurat clustering outputs\
-            - "velocyto" for velocyto outputs (".loom" files containing counts of spliced and unspliced reads)\
-            - "scvelo" for Scvelo mRNA velocity outputs
+            - "scanpy" for Scanpy clustering outputs (without SoupX)\
+                - "scina" for SCINA cell type annotation outputs\
+            - "seurat" for Seurat clustering outputs (without SoupX)\
+                - "scina" for SCINA cell type annotation outputs\
+            - (If enabled) "soupx" for SoupX outputs:\
+                - "soupx", "scanpy" or "seurat"
 
 <br/>
 
-### Parameters specific to starting from fastq files:
+### Parameters specific to starting from fastq files (set only one):
 
-- `input`     The file path to an input ".txt" (tab delimited) or ".csv" file containing sample information.\
+- `input_count`     The file path to an input ".txt" (tab delimited) file containing sample information to run Cell Ranger Count.\
             - The first column of the sample sheet must be named "sample_id" and contain sample-specific identifiers that also are prefixes in the corresponding fastq file names.\
             For example: Put "sample_x" as sample ID if your fastq files are named "sample_x_S2_L001_I1_001.fastq.gz", "sample_x_S2_L001_R1_001.fastq.gz", "sample_x_S2_L001_R2_001.fastq.gz" etc.\
-            - The second column of the sample sheet must be named "fastq_dir" and contain the file paths to directories with fastq files to be analysed. Fastq files of multiple samples may be located within the same directory.
+            - The second column must be named "fastq_dir" and contain file paths to directories with fastq files to be analysed. Fastq files of multiple samples may be located within the same directory. \
+	    - Further metadata columns can be added: e.g. "sample_name", "tissue", "condition" etc.
 
-NOTE: Set `cellranger_out_dir` and `metadata` instead of `input` to start the pipeline from previously computed Cellranger mapping results instead of fastq files. Make sure in this case that `input` is empty to prevent genome alignment from being run.\
-Optionally set the `scRNA_velocity_file` parameter to run mRNA velocity analysis when starting from Cellranger outputs.
-
+- `input_multi`     The file path to an input ".txt" (tab delimited) file containing sample information to run Cell Ranger Multi.\
+            - The first column must be named "parent_id" and contain the sample-specific prefixes of the fastq files, \
+              IMPORTANT: use identical parent IDs to name gene expression and multiplex capture (CMO) fastq files originating from the same sample \
+              -> add suffix "GEX" to gene expression parent ID/fastq file name, add suffix "CMO" to multiplex capture parent ID/fastq file name. \
+              Include only GEX parent IDs (not CMO parent IDs) in the sample sheet. \
+              If samples have been re-sequenced, supply all prefixes as a comma-separated list. \
+            - The second column must be named "fastq_dir" and contain file paths to directories containing GEX and CMO fastq files specified by "parent_id". \
+              If samples have been re-sequenced and are stored in multiple directories, supply all directories as a comma-separated list. \
+            - The third column must be named "sample_id" and contain the names of the de-multiplexed samples present in the fastq files, \
+              put one sample ID per line and duplicate "parent_id" and "fastq_dir" column entries as necessary. \
+            - The fourth column must be named "cmo_id" and contain the CMO tags corresponding to de-multiplexed sample IDs. \
+	    - Further metadata columns can be added: e.g. "sample_name", "tissue", "condition" etc.
 <br/>
 
 ### Parameters specific to starting from Cellranger output files:
 
-- `cellranger_out_dir`  The file path to a directory containing cellranger output "barcodes.tsv.gz", "features.tsv.gz" and "matrix.mtx.gz" files, typically a "/outs/count/filtered_feature_bc_matrix" directory.
+- `cellranger_out_dir`  The file path to a directory containing cellranger output "barcodes.tsv.gz", "features.tsv.gz" and "matrix.mtx.gz" files, typically a "/outs/count/filtered_feature_bc_matrix" directory. \
+ALTERNATIVELY, this directory can contain '.h5' files with Cell Ranger mapped data.
 
-- `metadata`      The file path to a tab delimited file containing\
-                - a column named "barcode" of cell barcodes,\
-                - a column named "sample_id" of sample identifiers,\
-                - optional metadata columns\
+- `metadata`      The file path to a tab delimited file containing \
+                - a column named "barcode" of cell barcodes, \
+                - a column named "sample_id" of sample identifiers, \
+                - optional metadata columns \
+                When  '.h5' , the metadata file does not need to contain a "barcode" column. \
                 Doublet detection is performed using the "sample_id" column.
 
-- `scRNA_velocity_file`   Optional: The file path to a tab delimited file containing\
-                        - a column named "sample_id" of sample identifiers,\
-                        - a column named "cellranger_count_dir" of file paths to directories containing  Cellranger count BAM files. Each directory must be the direct parent directory of "/outs/possorted_genome_bam.bam", for example a `cellranger count` output directory.
+- `mapping_mode`  The mode that Cell Ranger was run in to generate the mapped data ("cell ranger count" or "cell ranger multi")
 
-NOTE: If the `input` parameter is not set, mRNA velocity analysis is only run if the `scRNA_velocity_file` parameter is set.
-
+- `cellranger_info_tsv` (Optional) If you would like to run SoupX to correct ambient RNA contamination, supply a file path to a \
+                tab-delimited text file with columns "sample_id", containing sample IDs for Cell Ranger Count or \
+                non de-multiplexed parent IDs for Cell Ranger Multi, and "cellranger_dir", containing paths to Cell Ranger \
+                output directories (containing the "outs/" directory)
 <br/>
 
 ### Parameters related to scRNA-seq clustering:
 
-- `clustering_mode`   Clustering analysis mode, can be one of: "scanpy" or "seurat"
+- `clustering_mode`   Clustering analysis tool to use. Values: "scanpy" or "seurat"
+- `drop_ribo_prot`    Should ribosomal protein genes be excluded from highly variable genes before clustering? Values: "Yes" or "No"
+- `genes_drop_csv`    Optional: Path to a csv file containing genes to be dropped from highly variable genes before clustering
 - `min_genes`         Minimum number of genes expressed for a cell to be kept in the dataset, defaults to 200
 - `max_genes`         Maximum number of genes expressed for a cell to be kept in the dataset, defaults to 2500
 - `max_perc_mt`       Maximum percentage of mitochondrial reads for a cell to be kept in the dataset, defaults to 5
@@ -124,19 +154,10 @@ NOTE: If the `input` parameter is not set, mRNA velocity analysis is only run if
 - `n_pcs`             Number of principal components to be computed, defaults to 30
 - `harmony_var`       Name of the metadata column to use for Harmony data integration, defaults to ""
 - `leiden_res`        Resolution of cell clustering, defaults to 0.4
+- `run_soupx`         Should ambient RNA contamination be corrected? Values: "Yes" or "No"
 
 <br/>
 
-### Parameters related to scRNA-seq annotation and mRNA velocity analysis:
-
-- `cell_type_anno`    The file path to a ".csv" file containing\
-                    - a column named "cluster" of cell cluster numbers\
-                    - a column named "cell_type" of cell type annotations\
-                    - an optional column named "order" of integers indicating the order in which cell types should appear in UMAP plot legends
-
-NOTE: scRNA-seq annotation and mRNA velocity analysis are only run if the `cell_type_anno` parameter is set.
-
-<br/>
 
 
 
@@ -149,66 +170,13 @@ Multiple parameters can be bundled into profiles. These are defined in the `prof
 ### Pre-defined executor profiles
 
 #### HPC_no_docker
-
 Use for pipeline execution on a high performance cluster without using Docker.
 
-Pre-defined process options:\
-`executor = "slurm"`\
-`queue    = "long"`\
-`time     = "3days"`\
-`memory   = "100 GB"`\
-`cpus     = 30`
-
-Pre-defined parameters:\
-`docker_enabled    = false`                 -> Indicates whether software dependencies should be run out of Docker containers\
-`cellranger_module = "cellranger/7.2.0"`    -> Name of the Cellranger software module to load if Docker is disabled\
-`samtools_module   = "samtools/1.17"`       -> Name of the Samtools software module to load if Docker is disabled\
-`python_module     = "python-cbrg"`         -> Name of the Python software module to load if Docker is disabled\
-`r_module          = "R-cbrg"`              -> Name of the R software module to load if Docker is disabled
-
-Pre-defined Docker options:\
-`docker.enabled = false`
-
-
-
 #### HPC_docker
-
 Use for pipeline execution on a high performance cluster that allows the use of Docker.
 
-Pre-defined process options:\
-`executor = "slurm"`\
-`queue    = "long"`\
-`time     = "3days"`\
-`memory   = "100 GB"`\
-`cpus     = 30`
-
-Pre-defined parameters:\
-`docker_enabled    = true`\
-`cellranger_module = "none"`\
-`samtools_module   = "none"`\
-`python_module     = "none"`\
-`r_module          = "none"`
-
-Pre-defined Docker options:\
-`docker.enabled = true`\
-`docker.runOptions = '-u $(id -u):$(id -g)'`
-
-
-
 #### standard
-
 Use for local pipeline execution.
-
-Pre-defined parameters:\
-`docker_enabled    = true`\
-`cellranger_module = "none"`\
-`samtools_module   = "none"`\
-`python_module     = "none"`\
-`r_module          = "none"`
-
-Pre-defined Docker options:\
-`docker.enabled = true`\
-`docker.runOptions = '-u $(id -u):$(id -g)'`
 
 <br/>
 
@@ -216,45 +184,20 @@ Pre-defined Docker options:\
 
 #### human
 
-`species         = "human"`\
-`species_latin   = "homo_sapiens"`  -> Species name used in genome browser files\
-`genome          = "GRCh38"`        -> Genome name used in ensembl genome browser\
-`genome_ucsc     = "hg38"`          -> Genome name used in UCSC genome browser\
-`ensembl_version = "110"`           -> Ensembl genome browser release to use for file downloads
-
-
-
 #### mouse
 
-`species         = "mouse"`\
-`species_latin   = "mus_musculus"`\
-`genome          = "GRCm39"`\
-`genome_ucsc     = "mm39"`\
-`ensembl_version = "110"`
-
-
-
 #### zebrafish
-
-`species         = "zebrafish"`\
-`species_latin   = "danio_rerio"`\
-`genome          = "GRCz11"`\
-`genome_ucsc     = "danRer11"`\
-`ensembl_version = "110"`
 
 <br/>
 
 
 
 ## References
-1.	Wolf, F.A., Angerer, P., and Theis, F.J. (2018). SCANPY: large-scale single-cell gene expression data analysis. Genome Biol 19, 15. 10.1186/s13059-017-1382-0.
-2.	Hao, Y., Hao, S., Andersen-Nissen, E., Mauck, W.M., 3rd, Zheng, S., Butler, A., Lee, M.J., Wilk, A.J., Darby, C., Zager, M., et al. (2021). Integrated analysis of multimodal single-cell data. Cell 184, 3573-3587 e3529. 10.1016/j.cell.2021.04.048.
-3.	Gayoso, Adam, Shor, Jonathan, Carr, Ambrose J., Sharma, Roshan, Pe'er, Dana (2020, December 18). DoubletDetection (Version v3.0). Zenodo. http://doi.org/10.5281/zenodo.2678041
-3.	McGinnis, C.S., Murrow, L.M., and Gartner, Z.J. (2019). DoubletFinder: Doublet Detection in Single-Cell RNA Sequencing Data Using Artificial Nearest Neighbors. Cell Syst 8, 329-337 e324. 10.1016/j.cels.2019.03.003.
-4.	Korsunsky, I., Millard, N., Fan, J., Slowikowski, K., Zhang, F., Wei, K., Baglaenko, Y., Brenner, M., Loh, P.R., and Raychaudhuri, S. (2019). Fast, sensitive and accurate integration of single-cell data with Harmony. Nat Methods 16, 1289-1296. 10.1038/s41592-019-0619-0.
-5.	La Manno, G., Soldatov, R., Zeisel, A., Braun, E., Hochgerner, H., Petukhov, V., Lidschreiber, K., Kastriti, M.E., Lonnerberg, P., Furlan, A., et al. (2018). RNA velocity of single cells. Nature 560, 494-498. 10.1038/s41586-018-0414-6.
-6.	Bergen, V., Lange, M., Peidli, S., Wolf, F.A., and Theis, F.J. (2020). Generalizing RNA velocity to transient cell states through dynamical modeling. Nat Biotechnol 38, 1408-1414. 10.1038/s41587-020-0591-3.
-7.  P. Di Tommaso, et al. (2017). Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319
-
-
-
+1.	Wolf, F.A., Angerer, P., and Theis, F.J. (2018). SCANPY: large-scale single-cell gene expression data analysis. Genome Biol 19, 15. [10.1186/s13059-017-1382-0](https://doi.org/10.1186/s13059-017-1382-0)
+2.	Hao, Y., Hao, S., Andersen-Nissen, E., Mauck, W.M., 3rd, Zheng, S., Butler, A., Lee, M.J., Wilk, A.J., Darby, C., Zager, M., et al. (2021). Integrated analysis of multimodal single-cell data. Cell 184, 3573-3587 e3529. [10.1016/j.cell.2021.04.048](https://doi.org/10.1016/j.cell.2021.04.048)
+3.	Gayoso, Adam, Shor, Jonathan, Carr, Ambrose J., Sharma, Roshan, Pe'er, Dana (2020, December 18). DoubletDetection (Version v3.0). Zenodo. [10.5281/zenodo.2678041](https://doi.org/10.5281/zenodo.2678041)
+4.	McGinnis, C.S., Murrow, L.M., and Gartner, Z.J. (2019). DoubletFinder: Doublet Detection in Single-Cell RNA Sequencing Data Using Artificial Nearest Neighbors. Cell Syst 8, 329-337 e324. [10.1016/j.cels.2019.03.003](https://doi.org/10.1016/j.cels.2019.03.003)
+5.	Korsunsky, I., Millard, N., Fan, J., Slowikowski, K., Zhang, F., Wei, K., Baglaenko, Y., Brenner, M., Loh, P.R., and Raychaudhuri, S. (2019). Fast, sensitive and accurate integration of single-cell data with Harmony. Nat Methods 16, 1289-1296. [10.1038/s41592-019-0619-0](https://doi.org/10.1038/s41592-019-0619-0)
+6.	Young, M.D., Behjati, S. (2020). SoupX removes ambient RNA contamination from droplet-based single-cell RNA sequencing data. GigaScience, Volume 9, Issue 12, December 2020. [10.1093/gigascience/giaa151](https://doi.org/10.1093/gigascience/giaa151)
+7.	Zhang Z., Luo D., et al. (2018). SCINA: A Semi-Supervised Subtyping Algorithm of Single Cells and Bulk Samples. Genes, Volume 10, Issue 7. [10.3390/genes10070531](https://doi.org/10.3390/genes10070531)
+8.  P. Di Tommaso, et al. (2017). Nextflow enables reproducible computational workflows. Nature Biotechnology 35, 316–319. [10.1038/nbt.3820](https://doi.org/10.1038/nbt.3820)
