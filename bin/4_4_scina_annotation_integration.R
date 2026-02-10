@@ -696,6 +696,7 @@ integrate_scina_results <- function(seurat_object, scina_results_df, cell_type_m
     
     # Use custom colors if set, otherwise Seurat's default
     plot_colors <- if (!is.null(cell_type_colors)) { colors_for_plot } else { Seurat:::DiscretePalette(length(unique(seurat_object$cell_type))) }
+    plot_colors <- rep(plot_colors, each = violin_n)
 
     stacked_vln_plot <- VlnPlot(
       seurat_object,
@@ -885,26 +886,9 @@ if (length(umap_markers_list) > 0) {
     warning("No significant positive markers found for consensus clusters. Skipping UMAP FeaturePlot generation based on consensus labels.")
 }
 
-# 6. Plot umap with cell cycle marker expression
-if("Cycling" %in% colnames(cell_type_markers_df)) {
-    all_genes_in_seurat = unique(rownames(seurat_obj_anno))
-    cycling_markers = cell_type_markers_df$Cycling[cell_type_markers_df$Cycling %in% all_genes_in_seurat]
-
-    umap_seurat(
-        seurat_obj = seurat_obj_anno, 
-        out_dir = out_dir, 
-        out_name = out_name,
-        idents_list = cycling_markers, 
-        labels = FALSE, 
-        file_type = "png"
-        )
-} else {
-    warning("'Cycling' key not found in markers_dict. Skipping cell cycle marker UMAP plot.")
-}
-
-# 7. Plot UMAP plots with metadata overlays
+# 5. Plot UMAP plots with metadata overlays
 idents_list = colnames(seurat_obj_anno@meta.data)
-idents_list = idents_list[!idents_list %in% c("barcode", "cell_id", "cell_type_ID")] # Exclude SCINA raw and custom ID plot
+idents_list = idents_list[!idents_list %in% c("barcode", "cell_id", "cell_type_ID")]
 
 umap_seurat(
     seurat_obj = seurat_obj_anno, 
@@ -916,7 +900,7 @@ umap_seurat(
     file_type = "png"
     )
 
-# 8. Generate blue-print csv file for manual cell type annotation
+# 6. Generate blue-print csv file for manual cell type annotation
 annotation_df <- seurat_obj_anno@meta.data[, c("seurat_clusters", "cell_type")]
 annotation_df <- annotation_df[!duplicated(annotation_df), ]
 colnames(annotation_df) <- c("cluster", "cell_type")
@@ -925,10 +909,10 @@ annotation_df <- annotation_df[order(annotation_df$cluster), ]
 annotation_df$order <- as.numeric(annotation_df$cell_type)
 write.csv(annotation_df, file.path(out_dir, paste0(out_name, "_annotation.csv")), row.names = FALSE)
 
-# 9. Export metadata as csv
+# 7. Export metadata as csv
 write.csv(seurat_obj_anno@meta.data, file.path(out_dir, paste0(out_name, "_metadata.csv")), row.names = TRUE)
 
-# 10. Save final object
+# 8. Save final object
 print(head(seurat_obj_anno@meta.data))
 saveRDS(seurat_obj_anno, file.path(out_dir, paste0(out_name, "_scRNAseq_no_doublets_annotated.rds")))
 
